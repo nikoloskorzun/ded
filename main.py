@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
-from algorithms import ford_fulkerson_algorithm, floyd_warshall_algo
+from algorithms import ford_fulkerson_algorithm, floyd_warshall_algo, BFS, BFS_
 from renamer import Renamer
 from itertools import combinations
 
@@ -18,16 +18,21 @@ def get_last_digit(line: str) -> int:
 
 class First_lab:
     def create_report(self):
+        print(f"Группа №{self.number_group}\nВариант №{self.var}")
         print("Результат работы алгоритма ФФ: максимальный поток и простые цепи")
         print(ford_fulkerson_algorithm(self))
-        print("Диаметр =", self.diam)
+        print("Диаметр и пути=", self.diam)
         print("ST-отделяющее множество =", self.separating_set)
         print("ST-разделяющее множество =", self.dividing_set)
-        #self.draw_cut(self.dividing_set)
+        print("Разрезы: ")
+        self.cut_creator()
+
+
+
 
 
     def cut_creator(self):
-        _, temp = ford_fulkerson_algorithm(self, image_create=False)
+        max_flow, temp = ford_fulkerson_algorithm(self, image_create=False)
         chains = []
         for el in temp:
             t = []
@@ -38,6 +43,7 @@ class First_lab:
         cuts_dict_ = {}
         for i in range(2, len(self.dividing_set)):
             cuts_dict[i] = list(combinations(self.dividing_set, i))
+        #Исключаем согласно определению
         for i in cuts_dict:
             for cut in cuts_dict[i]:
                 cc = 0
@@ -57,12 +63,26 @@ class First_lab:
                     cuts_dict_[i].append(cut)
 
 
+        #исключаем не разделяющие множества
         for i in cuts_dict_:
             for c in cuts_dict_[i]:
-                print(c)
-                self.draw_cut(c, str(c))
-    def draw_cut(self, cut, fn = "test.png"):
+                temp_graph = self.graph.copy()
+                for edge in c:
+                    temp_graph.remove_edge(edge[0],edge[1])
+                if not nx.has_path(temp_graph, "S", "T"):
 
+                    if max_flow == self.cut_len(c):
+                        print("Минимальный разрез:\n\t", c, self.cut_len(c))
+                    else:
+                        print(c, self.cut_len(c))
+                    self.draw_cut(c, 'cuts\\' + str(c))
+
+    def cut_len(self, cut):
+        s = 0
+        for c in cut:
+            s+= self.graph.edges[c]["max_flow"]
+        return s
+    def draw_cut(self, cut, fn = "test.png"):
         temp = [(u, v) for u, v in self.graph.edges()]
         for edge in cut:
             temp.pop(temp.index(edge))
@@ -71,6 +91,21 @@ class First_lab:
 
 
     def __init__(self):
+        import os
+        if os.path.isdir("steps"):
+            for f in os.listdir("steps"):
+                os.remove("steps/"+f)
+        else:
+            os.mkdir("steps")
+
+        if os.path.isdir("cuts"):
+            for f in os.listdir("cuts"):
+                os.remove("cuts/"+f)
+        else:
+            os.mkdir("cuts")
+
+        del os
+
         self._var = None
         self._number_group = None
         self._graph = None
@@ -266,9 +301,7 @@ def circular_layout_but_better(G: dict) -> dict[str, np.float32]:
 
 if __name__ == "__main__":
     o = First_lab()
-    o.var = 6
+    o.var = 9
     o.number_group = "1042"
 
-    #o.draw_cut([('0', '1')])
-    #o.create_report()
-    o.cut_creator()
+    o.create_report()
